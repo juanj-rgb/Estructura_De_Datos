@@ -17,7 +17,7 @@ Para evitar saturar la memoria RAM (*Memory Overflow*), la matriz no se carga co
 
 ##  Contenido del Repositorio
 
-* `laboratorio1_final.py`: Script principal que contiene la lógica de generación rápida en disco, consultas DASD O(1) y el módulo de inspección física.
+* `lab_1`: Script principal que contiene la lógica de generación rápida en disco, consultas DASD O(1) y el módulo de inspección física.
 * `README.md`: Documentación completa del proyecto y guía de verificación.
 * `.gitignore`: Configuración para excluir el archivo binario pesado (`.dat`) del control de versiones.
 
