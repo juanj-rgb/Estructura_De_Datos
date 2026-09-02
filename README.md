@@ -7,7 +7,7 @@
 
 ---
 
-## 📌 Descripción del Proyecto
+##  Descripción del Proyecto
 
 Este proyecto implementa y manipula una **matriz bidimensional gigante de 100,000 x 100,000 elementos** (10,000,000,000 de celdas) almacenada directamente en almacenamiento secundario (disco duro). 
 
@@ -15,7 +15,7 @@ Para evitar saturar la memoria RAM (*Memory Overflow*), la matriz no se carga co
 
 ---
 
-## 📂 Contenido del Repositorio
+##  Contenido del Repositorio
 
 * `laboratorio1_final.py`: Script principal que contiene la lógica de generación rápida en disco, consultas DASD O(1) y el módulo de inspección física.
 * `README.md`: Documentación completa del proyecto y guía de verificación.
@@ -23,7 +23,7 @@ Para evitar saturar la memoria RAM (*Memory Overflow*), la matriz no se carga co
 
 ---
 
-## 🛠️ Conceptos de Unidad 1 Aplicados
+##  Conceptos de Unidad 1 Aplicados
 
 1. **Almacenamiento Binario Masivo:** Uso de registros de 1 bit por celda optimizados mediante máscaras de bits (`bit shifting`).
 2. **Acceso Directo DASD ($O(1)$):** Navegación por el archivo usando `f.seek(offset)` para leer coordenadas $(i, j)$ sin recorrer el archivo.
@@ -34,7 +34,7 @@ Para evitar saturar la memoria RAM (*Memory Overflow*), la matriz no se carga co
 
 ---
 
-## 🔍 Método de Verificación del Archivo Generado
+##  Método de Verificación del Archivo Generado
 
 El programa incluye un módulo de **Inspección Física** para probar la existencia geométrica de la matriz directamente desde las propiedades del archivo `.dat`:
 
@@ -50,7 +50,7 @@ El programa incluye un módulo de **Inspección Física** para probar la existen
 
 ---
 
-## 🚀 Instrucciones de Ejecución
+##  Instrucciones de Ejecución
 
 1. Ejecutar el script principal con Python 3:
    ```bash
