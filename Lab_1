@@ -1,0 +1,189 @@
+import os
+import sys
+
+# ==========================================
+# CONFIGURACIÓN DE LA MATRIZ (100k x 100k)
+# ==========================================
+FILAS = 100_000
+COLUMNAS = 100_000
+TOTAL_BITS = FILAS * COLUMNAS
+TOTAL_BYTES = TOTAL_BITS // 8  # 1.250.000.000 bytes (~1.16 GB)
+
+NOMBRE_ARCHIVO = "matriz_100kx100k.dat"
+
+# ==========================================
+# 1. GENERACIÓN RÁPIDA EN DISCO (ALMACENAMIENTO)
+# ==========================================
+def crear_matriz_bits_rapida():
+    """Genera la matriz en disco usando 1 bit por casilla con patrón 0/1 precalculado."""
+    print(f"\n--> Creando matriz de {FILAS:,} x {COLUMNAS:,} en BITS...")
+    print(f"--> Tamaño total en disco: {TOTAL_BYTES / (1024**3):.2f} GB")
+    
+    BYTES_POR_FILA = COLUMNAS // 8
+    
+    # Precalculamos filas de bits alternados (0xAA = 10101010, 0x55 = 01010101)
+    fila_par = bytes([0xAA] * BYTES_POR_FILA)  
+    fila_impar = bytes([0x55] * BYTES_POR_FILA)
+    
+    # Bloque de 1,000 filas en RAM para máxima velocidad de escritura
+    bloque_1000_filas = (fila_par + fila_impar) * 500
+    
+    with open(NOMBRE_ARCHIVO, "wb") as f:
+        for i in range(100):
+            f.write(bloque_1000_filas)
+            porcentaje = (i + 1)
+            print(f"\rProgreso de escritura: {porcentaje}%", end="")
+            
+    print("\n¡Matriz creada en disco exitosamente!")
+
+# ==========================================
+# 2. OPERACIONES DE ACCESO DIRECTO (DASD)
+# ==========================================
+def consultar_posicion_bit(i, j):
+    """Acceso directo O(1) a una coordenada (Fila, Columna) específica."""
+    if not (0 <= i < FILAS and 0 <= j < COLUMNAS):
+        print("Coordenadas fuera de rango.")
+        return
+
+    # Mapeo bidimensional a desplazamiento lineal (Row-Major Order)
+    bit_index = i * COLUMNAS + j
+    byte_offset = bit_index // 8
+    bit_position = 7 - (bit_index % 8)
+
+    with open(NOMBRE_ARCHIVO, "rb") as f:
+        f.seek(byte_offset)  # Salto DASD en disco
+        byte_leido = int.from_bytes(f.read(1), byteorder='big')
+        valor_bit = (byte_leido >> bit_position) & 1
+        
+        print(f"\n[Acceso Directo DASD a Bit]")
+        print(f"-> Coordenada consultada: M[{i}][{j}]")
+        print(f"-> Valor del Bit: {valor_bit}")
+        print(f"-> Desplazamiento en disco (Byte Offset): {byte_offset:,} bytes")
+        print(f"-> Posición dentro del byte: Bit {7 - bit_position}")
+
+def mostrar_submatriz_bits(fila_inicio=0, col_inicio=0, num_filas=5, num_cols=5):
+    """Muestra una submatriz parcial leyendo por bloques en disco (Entregable 'Mostrar')."""
+    print(f"\n--- VISTA SUBMATRIZ M[{fila_inicio}:{fila_inicio+num_filas}, {col_inicio}:{col_inicio+num_cols}] ---")
+    
+    with open(NOMBRE_ARCHIVO, "rb") as f:
+        for f_idx in range(num_filas):
+            fila_actual = fila_inicio + f_idx
+            valores_fila = []
+            
+            for c_idx in range(num_cols):
+                col_actual = col_inicio + c_idx
+                bit_index = fila_actual * COLUMNAS + col_actual
+                byte_offset = bit_index // 8
+                bit_position = 7 - (bit_index % 8)
+                
+                f.seek(byte_offset)
+                byte_leido = int.from_bytes(f.read(1), byteorder='big')
+                valor_bit = (byte_leido >> bit_position) & 1
+                valores_fila.append(valor_bit)
+                
+            print(f"Fila {fila_actual:6d}: {valores_fila}")
+
+def obtener_fila_completa(num_fila):
+    """Demuestra que la matriz tiene filas completas almacenadas secuencialmente."""
+    if not (0 <= num_fila < FILAS):
+        print("Fila fuera de rango.")
+        return
+
+    byte_inicio = (num_fila * COLUMNAS) // 8
+    bytes_por_fila = COLUMNAS // 8
+
+    with open(NOMBRE_ARCHIVO, "rb") as f:
+        f.seek(byte_inicio)
+        datos_fila = f.read(bytes_por_fila)
+        
+        bits = []
+        for byte in datos_fila:
+            for shift in range(7, -1, -1):
+                bits.append((byte >> shift) & 1)
+                
+    print(f"\n[CONSULTA DE FILA COMPLETA]")
+    print(f"-> Fila {num_fila} leída de disco. Total columnas: {len(bits):,}")
+    print(f"-> Primeros 10 elementos: {bits[:10]}")
+    print(f"-> Últimos 10 elementos:   {bits[-10:]}")
+
+def obtener_columna_parcial(num_columna, num_filas=5):
+    """Demuestra el recorrido vertical de la matriz a través de múltiples filas."""
+    print(f"\n[CONSULTA DE COLUMNA] Leyendo Columna {num_columna} (Primeras {num_filas} filas):")
+    with open(NOMBRE_ARCHIVO, "rb") as f:
+        for i in range(num_filas):
+            bit_index = i * COLUMNAS + num_columna
+            byte_offset = bit_index // 8
+            bit_position = 7 - (bit_index % 8)
+            
+            f.seek(byte_offset)
+            byte_leido = int.from_bytes(f.read(1), byteorder='big')
+            valor_bit = (byte_leido >> bit_position) & 1
+            print(f"-> M[{i:2d}][{num_columna}] = {valor_bit}")
+
+def mostrar_metadatos():
+    """Muestra información física del archivo guardado en disco."""
+    if os.path.exists(NOMBRE_ARCHIVO):
+        bytes_totales = os.path.getsize(NOMBRE_ARCHIVO)
+        gb_totales = bytes_totales / (1024**3)
+        print("\n--- METADATOS DEL ARCHIVO EN DISCO ---")
+        print(f"Ruta completa: {os.path.abspath(NOMBRE_ARCHIVO)}")
+        print(f"Tamaño ocupado: {bytes_totales:,} Bytes ({gb_totales:.2f} GB)")
+        print(f"Total registros (bits): {TOTAL_BITS:,}")
+
+# ==========================================
+# 3. MENÚ INTERACTIVO PARA LA PRESENTACIÓN
+# ==========================================
+def menu():
+    if not os.path.exists(NOMBRE_ARCHIVO):
+        print("El archivo de la matriz no existe en el disco duro.")
+        res = input("¿Deseas generarlo ahora? (Ocupará ~1.16 GB) (s/n): ")
+        if res.lower() == 's':
+            crear_matriz_bits_rapida()
+        else:
+            sys.exit()
+
+    while True:
+        print("\n=======================================================")
+        print(" LABORATORIO 1: MATRIZ DE 100,000 x 100,000 EN DISCO")
+        print(" Estructura: Registros Fijos a Bits (Acceso DASD)")
+        print("=======================================================")
+        print("1. 'Mostrar' Submatriz parcial (Vista 5x5 por lotes)")
+        print("2. Consultar Bit por Coordenada M[i][j] (Acceso Directo)")
+        print("3. Consultar Fila Completa de la matriz")
+        print("4. Consultar Columna (Recorrido vertical entre filas)")
+        print("5. Mostrar Metadatos del archivo en disco")
+        print("6. Salir")
+        
+        opcion = input("\nSelecciona una opción (1-6): ")
+        
+        if opcion == "1":
+            mostrar_submatriz_bits(0, 0, 5, 5)
+        elif opcion == "2":
+            try:
+                i = int(input("Ingresa Fila (0 a 99999): "))
+                j = int(input("Ingresa Columna (0 a 99999): "))
+                consultar_posicion_bit(i, j)
+            except ValueError:
+                print("Error: Ingresa enteros válidos.")
+        elif opcion == "3":
+            try:
+                num_fila = int(input("Ingresa número de Fila (0 a 99999): "))
+                obtener_fila_completa(num_fila)
+            except ValueError:
+                print("Error: Ingresa enteros válidos.")
+        elif opcion == "4":
+            try:
+                num_col = int(input("Ingresa número de Columna (0 a 99999): "))
+                obtener_columna_parcial(num_col)
+            except ValueError:
+                print("Error: Ingresa enteros válidos.")
+        elif opcion == "5":
+            mostrar_metadatos()
+        elif opcion == "6":
+            print("Saliendo del programa...")
+            break
+        else:
+            print("Opción inválida.")
+
+if __name__ == "__main__":
+    menu()
